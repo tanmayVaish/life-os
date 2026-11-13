@@ -1,19 +1,28 @@
 import { openDatabase, type StoreName } from "@/lib/local-data/database";
+import { notifyLocalDataChange } from "@/lib/local-data/events";
 import type {
   CreateRecord,
   LocalRecord,
   UpdateRecord,
 } from "@/lib/local-data/models/common";
 
-function runTransaction<TResult>(
-  storeName: StoreName,
+type StoreScope = StoreName | readonly [StoreName, ...StoreName[]];
+
+export function runLocalTransaction<TResult>(
+  storeScope: StoreScope,
   mode: IDBTransactionMode,
   operation: (
     store: IDBObjectStore,
     setResult: (result: TResult) => void,
     fail: (error: Error) => void,
+    transaction: IDBTransaction,
   ) => void,
 ): Promise<TResult> {
+  const storeNames =
+    typeof storeScope === "string" ? ([storeScope] as const) : storeScope;
+  const primaryStoreName =
+    typeof storeScope === "string" ? storeScope : storeScope[0];
+
   return openDatabase().then(
     (database) =>
       new Promise<TResult>((resolve, reject) => {
@@ -21,8 +30,8 @@ function runTransaction<TResult>(
         let hasResult = false;
         let settled = false;
         let operationError: Error | undefined;
-        const transaction = database.transaction(storeName, mode);
-        const store = transaction.objectStore(storeName);
+        const transaction = database.transaction([...storeNames], mode);
+        const store = transaction.objectStore(primaryStoreName);
 
         const rejectOnce = (error: Error) => {
           if (settled) return;
@@ -37,6 +46,11 @@ function runTransaction<TResult>(
             return;
           }
 
+          if (mode === "readwrite") {
+            for (const storeName of storeNames) {
+              notifyLocalDataChange(storeName);
+            }
+          }
           settled = true;
           resolve(result);
         };
@@ -68,7 +82,7 @@ function runTransaction<TResult>(
         };
 
         try {
-          operation(store, setResult, fail);
+          operation(store, setResult, fail, transaction);
         } catch (error) {
           fail(
             error instanceof Error
@@ -95,14 +109,14 @@ export function createLocalRepository<T extends LocalRecord>(
       } as T;
       validate(record);
 
-      return runTransaction<T>(storeName, "readwrite", (store, setResult) => {
+      return runLocalTransaction<T>(storeName, "readwrite", (store, setResult) => {
         const request = store.add(record);
         request.onsuccess = () => setResult(record);
       });
     },
 
     get(id: string): Promise<T | undefined> {
-      return runTransaction<T | undefined>(
+      return runLocalTransaction<T | undefined>(
         storeName,
         "readonly",
         (store, setResult) => {
@@ -113,14 +127,14 @@ export function createLocalRepository<T extends LocalRecord>(
     },
 
     list(): Promise<T[]> {
-      return runTransaction<T[]>(storeName, "readonly", (store, setResult) => {
+      return runLocalTransaction<T[]>(storeName, "readonly", (store, setResult) => {
         const request = store.getAll();
         request.onsuccess = () => setResult(request.result as T[]);
       });
     },
 
     update(id: string, changes: UpdateRecord<T>): Promise<T> {
-      return runTransaction<T>(
+      return runLocalTransaction<T>(
         storeName,
         "readwrite",
         (store, setResult, fail) => {
@@ -139,6 +153,9 @@ export function createLocalRepository<T extends LocalRecord>(
               createdAt: existing.createdAt,
               updatedAt: new Date().toISOString(),
             } as T;
+            for (const [key, value] of Object.entries(changes)) {
+              if (value === undefined) Reflect.deleteProperty(updated, key);
+            }
             try {
               validate(updated);
             } catch (error) {
@@ -157,7 +174,7 @@ export function createLocalRepository<T extends LocalRecord>(
     },
 
     delete(id: string): Promise<void> {
-      return runTransaction<void>(
+      return runLocalTransaction<void>(
         storeName,
         "readwrite",
         (store, setResult, fail) => {

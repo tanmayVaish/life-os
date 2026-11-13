@@ -6,33 +6,33 @@ type ActivityDay = {
 };
 
 type ActivityOverviewProps = {
-  total: string;
-  change: string;
+  total: number;
   days: ActivityDay[];
+  chartLabel: string;
 };
 
 export function ActivityOverview({
   total,
-  change,
   days,
+  chartLabel,
 }: ActivityOverviewProps) {
   return (
     <section aria-labelledby="activity-heading" className="activity-section">
       <SectionHeading
         headingId="activity-heading"
         kicker="Your rhythm"
-        meta="THIS WEEK"
+        meta="LAST 7 DAYS"
         metaClassName="activity-period"
         title="Activity"
       />
 
       <div className="activity-total">
         <span className="activity-value">{total}</span>
-        <span className="activity-unit">hours in focus</span>
+        <span className="activity-unit">saved entries in 7 days</span>
       </div>
 
       <div
-        aria-label="Focus time by day this week"
+        aria-label={chartLabel}
         className="activity-chart"
         role="img"
       >
@@ -49,15 +49,12 @@ export function ActivityOverview({
       <div className="activity-footer">
         <span className="activity-footnote">
           <span className="status-dot" />
-          A steady week so far
-        </span>
-        <span className="activity-change">
-          {change} <span>vs. last week</span>
+          {total === 0 ? "A fresh start" : "Based on saved records"}
         </span>
       </div>
       <details className="activity-detail">
         <summary>About this overview</summary>
-        <p>Focus time is a simple weekly snapshot of time set aside for deep work.</p>
+        <p>Each mark represents a task, note or expense created on that day.</p>
       </details>
     </section>
   );

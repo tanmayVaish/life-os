@@ -4,5 +4,7 @@ export * from "@/lib/local-data/models/expense";
 export * from "@/lib/local-data/models/note";
 export * from "@/lib/local-data/models/task";
 export * from "@/lib/local-data/notes";
+export * from "@/lib/local-data/projects";
+export * from "@/lib/local-data/models/project";
 export * from "@/lib/local-data/tasks";
 export * from "@/lib/local-data/validation";

@@ -1,10 +1,23 @@
+"use client";
+
 import Link from "next/link";
 import { Icon } from "@/components/icon";
 import { MobileNavigation } from "@/components/mobile-navigation";
 import { QuickCapture } from "@/components/quick-capture";
 import { BrandMark, NavigationLinks } from "@/components/sidebar";
+import { usePreferences } from "@/hooks/use-preferences";
 
 export function Topbar() {
+  const { preferences } = usePreferences();
+  const initials =
+    preferences.name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "ST";
+
   return (
     <header className="topbar">
       <Link aria-label="Still home" className="topbar-brand" href="/">
@@ -27,24 +40,21 @@ export function Topbar() {
           />
         </label>
         <QuickCapture />
-        <button
-          aria-label="Settings (coming soon)"
+        <Link
+          aria-label="Settings"
           className="icon-button settings-button"
-          disabled
-          title="Settings are coming soon"
-          type="button"
+          href="/settings"
+          title="Settings"
         >
           <Icon name="settings" />
-        </button>
-        <button
-          aria-label="Profile (coming soon)"
+        </Link>
+        <span
+          aria-label={preferences.name ? `Profile: ${preferences.name}` : "Profile"}
           className="profile-button"
-          disabled
-          title="Profile is coming soon"
-          type="button"
+          title={preferences.name || "Your profile"}
         >
-          MC
-        </button>
+          {initials}
+        </span>
       </div>
 
       <MobileNavigation>

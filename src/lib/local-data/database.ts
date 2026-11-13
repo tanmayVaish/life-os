@@ -1,7 +1,7 @@
 export const databaseName = "life-os-local";
-const databaseVersion = 1;
+const databaseVersion = 2;
 
-export const storeNames = ["tasks", "notes", "expenses"] as const;
+export const storeNames = ["tasks", "notes", "expenses", "projects"] as const;
 export type StoreName = (typeof storeNames)[number];
 
 let databasePromise: Promise<IDBDatabase> | null = null;

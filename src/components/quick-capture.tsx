@@ -8,6 +8,7 @@ import {
   createTask,
 } from "@/lib/local-data";
 import { ModalDialog } from "@/components/modal-dialog";
+import { usePreferences } from "@/hooks/use-preferences";
 
 type CaptureType = "task" | "note" | "expense";
 
@@ -26,6 +27,7 @@ const capturePrompts: Record<CaptureType, string> = {
 };
 
 export function QuickCapture() {
+  const { preferences } = usePreferences();
   const [isOpen, setIsOpen] = useState(false);
   const [captureType, setCaptureType] = useState<CaptureType>("task");
   const [content, setContent] = useState("");
@@ -189,7 +191,7 @@ export function QuickCapture() {
 
           {captureType === "expense" && (
             <label className="capture-field capture-amount">
-              <span>Amount</span>
+              <span>Amount ({preferences.currency})</span>
               <input
                 inputMode="decimal"
                 min="0.01"
@@ -199,7 +201,7 @@ export function QuickCapture() {
                   setValidationMessage("");
                   setErrorMessage("");
                 }}
-                placeholder="$0.00"
+                placeholder="0.00"
                 required
                 step="0.01"
                 type="number"
