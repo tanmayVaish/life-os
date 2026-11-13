@@ -1,7 +1,13 @@
 export const databaseName = "life-os-local";
-const databaseVersion = 2;
+const databaseVersion = 3;
 
-export const storeNames = ["tasks", "notes", "expenses", "projects"] as const;
+export const storeNames = [
+  "tasks",
+  "notes",
+  "expenses",
+  "projects",
+  "journalEntries",
+] as const;
 export type StoreName = (typeof storeNames)[number];
 
 let databasePromise: Promise<IDBDatabase> | null = null;
@@ -22,7 +28,12 @@ export function openDatabase(): Promise<IDBDatabase> {
         const database = request.result;
         for (const storeName of storeNames) {
           if (!database.objectStoreNames.contains(storeName)) {
-            database.createObjectStore(storeName, { keyPath: "id" });
+            const store = database.createObjectStore(storeName, {
+              keyPath: "id",
+            });
+            if (storeName === "journalEntries") {
+              store.createIndex("date", "date", { unique: true });
+            }
           }
         }
       };

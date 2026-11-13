@@ -11,6 +11,7 @@ import { useLocalRecords } from "@/hooks/use-local-records";
 import { usePreferences } from "@/hooks/use-preferences";
 import {
   listExpenses,
+  listJournalEntries,
   listNotes,
   listProjects,
   listTasks,
@@ -19,6 +20,7 @@ import {
   updateTask,
 } from "@/lib/local-data";
 import { formatCompactCurrency, formatLocalDate } from "@/lib/formatters";
+import { getLocalDateKey } from "@/lib/local-date";
 
 type ActivityDay = { day: string; height: string; date: Date; count: number };
 
@@ -67,6 +69,7 @@ export function Dashboard() {
   const tasks = useLocalRecords("tasks", listTasks);
   const projects = useLocalRecords("projects", listProjects);
   const notes = useLocalRecords("notes", listNotes);
+  const journal = useLocalRecords("journalEntries", listJournalEntries);
   const expenses = useLocalRecords("expenses", listExpenses);
   const [operationError, setOperationError] = useState("");
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
@@ -80,11 +83,13 @@ export function Dashboard() {
     tasks.isLoading ||
     projects.isLoading ||
     notes.isLoading ||
+    journal.isLoading ||
     expenses.isLoading;
   const errors = [
     tasks.error,
     projects.error,
     notes.error,
+    journal.error,
     expenses.error,
   ].filter(
     (message): message is string => message !== null,
@@ -95,6 +100,15 @@ export function Dashboard() {
   const recentNotes = [...notes.records]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 2);
+  const todayKey = currentDate ? getLocalDateKey(currentDate) : null;
+  const todayEntry = todayKey
+    ? journal.records.find((entry) => entry.date === todayKey)
+    : undefined;
+  const recentJournalEntry = [...journal.records].sort(
+    (a, b) =>
+      b.date.localeCompare(a.date) ||
+      b.updatedAt.localeCompare(a.updatedAt),
+  )[0];
   const projectNames = new Map(
     projects.records.map((project) => [project.id, project.name]),
   );
@@ -121,11 +135,16 @@ export function Dashboard() {
     () =>
       currentDate
         ? getActivityDays(
-            [...tasks.records, ...notes.records, ...expenses.records],
+            [
+              ...tasks.records,
+              ...notes.records,
+              ...expenses.records,
+              ...journal.records,
+            ],
             currentDate,
           )
         : [],
-    [currentDate, tasks.records, notes.records, expenses.records],
+    [currentDate, tasks.records, notes.records, expenses.records, journal.records],
   );
   const activityTotal = activityDays.reduce((sum, day) => sum + day.count, 0);
   const chartLabel = activityDays
@@ -169,6 +188,7 @@ export function Dashboard() {
             tasks.reload();
             projects.reload();
             notes.reload();
+            journal.reload();
             expenses.reload();
           }}
         />
@@ -206,6 +226,67 @@ export function Dashboard() {
 
           <div className="dashboard-columns">
             <div className="dashboard-records">
+              <section aria-labelledby="journal-heading">
+                <SectionHeading
+                  headingId="journal-heading"
+                  kicker="Your day, in words"
+                  meta={
+                    <Link className="section-link" href="/journal">
+                      Open journal
+                    </Link>
+                  }
+                  title="Journal"
+                />
+                <div className="dashboard-journal">
+                  {todayKey && (
+                    <Link
+                      className="dashboard-journal-row"
+                      href={`/journal?date=${todayKey}`}
+                    >
+                      <span className="dashboard-journal-label">Today</span>
+                      <span className="dashboard-journal-copy">
+                        {todayEntry
+                          ? todayEntry.title?.trim() ||
+                            todayEntry.content.split(/\r?\n/, 1)[0]?.trim() ||
+                            "Entry saved"
+                          : "No entry yet"}
+                      </span>
+                      <span className="dashboard-journal-action">
+                        {todayEntry ? "Read" : "Write"}
+                      </span>
+                    </Link>
+                  )}
+                  {recentJournalEntry &&
+                    recentJournalEntry.id !== todayEntry?.id && (
+                      <Link
+                        className="dashboard-journal-row"
+                        href={`/journal?date=${recentJournalEntry.date}`}
+                      >
+                        <span className="dashboard-journal-label">
+                          Most recent
+                        </span>
+                        <span className="dashboard-journal-copy">
+                          {recentJournalEntry.title?.trim() ||
+                            recentJournalEntry.content
+                              .split(/\r?\n/, 1)[0]
+                              ?.trim() ||
+                            "Journal entry"}
+                        </span>
+                        <span className="dashboard-journal-action">
+                          {formatLocalDate(
+                            `${recentJournalEntry.date}T12:00:00`,
+                          )}
+                        </span>
+                      </Link>
+                    )}
+                  {!recentJournalEntry && (
+                    <p className="dashboard-journal-empty">
+                      Your daily entries stay private on this device.
+                    </p>
+                  )}
+                </div>
+              </section>
+
               <section aria-labelledby="recent-tasks-heading">
                 <SectionHeading
                   headingId="recent-tasks-heading"
