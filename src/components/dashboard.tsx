@@ -21,6 +21,11 @@ import {
 } from "@/lib/local-data";
 import { formatCompactCurrency, formatLocalDate } from "@/lib/formatters";
 import { getLocalDateKey } from "@/lib/local-date";
+import {
+  filterExpensesByDateRange,
+  getExpenseDateRange,
+  summarizeExpenses,
+} from "@/lib/expense-insights";
 
 type ActivityDay = { day: string; height: string; date: Date; count: number };
 
@@ -119,17 +124,14 @@ export function Dashboard() {
   const openTaskCount = tasks.records.filter((task) => !task.completed).length;
   const completedTaskCount = tasks.records.length - openTaskCount;
 
-  const currentMonthExpenses = currentDate
-    ? expenses.records.reduce((sum, expense) => {
-        const createdAt = new Date(expense.createdAt);
-        const amount = Number(expense.amount);
-        return createdAt.getFullYear() === currentDate.getFullYear() &&
-          createdAt.getMonth() === currentDate.getMonth() &&
-          Number.isFinite(amount)
-          ? sum + amount
-          : sum;
-      }, 0)
-    : 0;
+  const currentMonthSummary = summarizeExpenses(
+    currentDate
+      ? filterExpensesByDateRange(
+          expenses.records,
+          getExpenseDateRange("month", currentDate),
+        )
+      : [],
+  );
 
   const activityDays = useMemo(
     () =>
@@ -214,11 +216,15 @@ export function Dashboard() {
               value={countLabel(completedTaskCount)}
             />
             <SummaryMetric
-              detail="The total of your saved expenses from this calendar month."
+              detail={`The total of ${currentMonthSummary.count} saved ${currentMonthSummary.count === 1 ? "expense" : "expenses"} from this calendar month.`}
               label="Spent this month"
-              note="from saved expenses"
+              note={
+                currentMonthSummary.count
+                  ? `${currentMonthSummary.count} saved ${currentMonthSummary.count === 1 ? "expense" : "expenses"}`
+                  : "no saved expenses"
+              }
               value={formatCompactCurrency(
-                currentMonthExpenses,
+                currentMonthSummary.total,
                 preferences.currency,
               )}
             />
