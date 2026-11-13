@@ -1,5 +1,5 @@
 export const databaseName = "life-os-local";
-const databaseVersion = 3;
+const databaseVersion = 6;
 
 export const storeNames = [
   "tasks",
@@ -7,6 +7,9 @@ export const storeNames = [
   "expenses",
   "projects",
   "journalEntries",
+  "goals",
+  "people",
+  "wishlistItems",
 ] as const;
 export type StoreName = (typeof storeNames)[number];
 

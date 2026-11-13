@@ -15,10 +15,10 @@ const navigationItems: NavigationItem[] = [
   { label: "Tasks", icon: "task", href: "/tasks" },
   { label: "Projects", icon: "project", href: "/projects" },
   { label: "Journal", icon: "journal", href: "/journal" },
-  { label: "Goals", icon: "goal" },
+  { label: "Goals", icon: "goal", href: "/goals" },
   { label: "Finance", icon: "finance", href: "/finance" },
-  { label: "People", icon: "people" },
-  { label: "Wishlist", icon: "wishlist" },
+  { label: "People", icon: "people", href: "/people" },
+  { label: "Wishlist", icon: "wishlist", href: "/wishlist" },
   { label: "Settings", icon: "settings", href: "/settings" },
 ];
 

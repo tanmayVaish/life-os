@@ -11,10 +11,19 @@ import { useLocalRecords } from "@/hooks/use-local-records";
 import { usePreferences } from "@/hooks/use-preferences";
 import {
   listExpenses,
+  calculateGoalProgress,
+  formatGoalValue,
+  listGoals,
   listJournalEntries,
   listNotes,
+  getPersonReminders,
+  getUpcomingBirthdays,
+  listPeople,
   listProjects,
   listTasks,
+  listWishlistItems,
+  summarizeWishlist,
+  type GoalRecord,
   type LocalRecord,
   getProjectProgress,
   updateTask,
@@ -73,9 +82,12 @@ export function Dashboard() {
   const { preferences } = usePreferences();
   const tasks = useLocalRecords("tasks", listTasks);
   const projects = useLocalRecords("projects", listProjects);
+  const goals = useLocalRecords("goals", listGoals);
+  const people = useLocalRecords("people", listPeople);
   const notes = useLocalRecords("notes", listNotes);
   const journal = useLocalRecords("journalEntries", listJournalEntries);
   const expenses = useLocalRecords("expenses", listExpenses);
+  const wishlist = useLocalRecords("wishlistItems", listWishlistItems);
   const [operationError, setOperationError] = useState("");
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
 
@@ -87,15 +99,21 @@ export function Dashboard() {
   const isLoading =
     tasks.isLoading ||
     projects.isLoading ||
+    goals.isLoading ||
+    people.isLoading ||
     notes.isLoading ||
     journal.isLoading ||
     expenses.isLoading;
+  const allDataLoading = isLoading || wishlist.isLoading;
   const errors = [
     tasks.error,
     projects.error,
+    goals.error,
+    people.error,
     notes.error,
     journal.error,
     expenses.error,
+    wishlist.error,
   ].filter(
     (message): message is string => message !== null,
   );
@@ -106,6 +124,12 @@ export function Dashboard() {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 2);
   const todayKey = currentDate ? getLocalDateKey(currentDate) : null;
+  const peopleReminders = todayKey
+    ? getPersonReminders(people.records, todayKey)
+    : null;
+  const upcomingBirthdays = todayKey
+    ? getUpcomingBirthdays(people.records, todayKey).slice(0, 2)
+    : [];
   const todayEntry = todayKey
     ? journal.records.find((entry) => entry.date === todayKey)
     : undefined;
@@ -121,6 +145,23 @@ export function Dashboard() {
     .filter((project) => project.status === "active")
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 2);
+  const activeGoalCount = goals.records.filter(
+    (goal) => goal.status === "active",
+  ).length;
+  const dashboardGoals = goals.records
+    .filter((goal) => goal.status === "active")
+    .sort((a, b) => {
+      if (a.targetDate && b.targetDate) {
+        return (
+          a.targetDate.localeCompare(b.targetDate) ||
+          b.updatedAt.localeCompare(a.updatedAt)
+        );
+      }
+      if (a.targetDate) return -1;
+      if (b.targetDate) return 1;
+      return b.updatedAt.localeCompare(a.updatedAt);
+    })
+    .slice(0, 2);
   const openTaskCount = tasks.records.filter((task) => !task.completed).length;
   const completedTaskCount = tasks.records.length - openTaskCount;
 
@@ -132,6 +173,7 @@ export function Dashboard() {
         )
       : [],
   );
+  const wishlistSummary = summarizeWishlist(wishlist.records);
 
   const activityDays = useMemo(
     () =>
@@ -189,15 +231,18 @@ export function Dashboard() {
           onRetry={() => {
             tasks.reload();
             projects.reload();
+            goals.reload();
+            people.reload();
             notes.reload();
             journal.reload();
             expenses.reload();
+            wishlist.reload();
           }}
         />
       ))}
       {operationError && <ErrorNotice message={operationError} />}
 
-      {isLoading ? (
+      {allDataLoading ? (
         <LoadingState label="Gathering what you have saved on this device..." />
       ) : (
         <>
@@ -397,6 +442,191 @@ export function Dashboard() {
                     description="A small space to keep related work together."
                     title="No active projects yet."
                   />
+                )}
+              </section>
+
+              <section aria-labelledby="active-goals-heading">
+                <SectionHeading
+                  headingId="active-goals-heading"
+                  kicker="What matters next"
+                  meta={
+                    <Link className="section-link" href="/goals">
+                      All goals
+                    </Link>
+                  }
+                  title="Active goals"
+                />
+                {goals.error ? (
+                  <p className="goal-dashboard-unavailable">
+                    Goal progress is unavailable.
+                  </p>
+                ) : activeGoalCount ? (
+                  <>
+                    <p className="goal-dashboard-count">
+                      {activeGoalCount} active{" "}
+                      {activeGoalCount === 1 ? "goal" : "goals"}
+                    </p>
+                    <ul className="goal-dashboard-list">
+                      {dashboardGoals.map((goal: GoalRecord) => {
+                        const percentage = calculateGoalProgress(
+                          goal.currentValue,
+                          goal.targetValue,
+                        );
+                        return (
+                          <li key={goal.id}>
+                            <Link
+                              className="goal-dashboard-item"
+                              href="/goals"
+                            >
+                              <span className="goal-dashboard-title">
+                                {goal.title}
+                              </span>
+                              <span className="goal-dashboard-progress-copy">
+                                <span>
+                                  {formatGoalValue(
+                                    goal.currentValue,
+                                    goal.unit,
+                                  )}{" "}
+                                  /{" "}
+                                  {formatGoalValue(
+                                    goal.targetValue,
+                                    goal.unit,
+                                  )}
+                                </span>
+                                <span>{percentage}%</span>
+                              </span>
+                              <span
+                                aria-label={`${percentage}% complete`}
+                                aria-valuemax={100}
+                                aria-valuemin={0}
+                                aria-valuenow={percentage}
+                                className="goal-progress-track"
+                                role="progressbar"
+                              >
+                                <span
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                ) : (
+                  <EmptyState
+                    action={
+                      <Link className="text-button" href="/goals">
+                        Set a goal
+                      </Link>
+                    }
+                    description="A quiet place to keep your longer-term aims in view."
+                    title="Nothing to track yet."
+                  />
+                )}
+              </section>
+
+              <section aria-labelledby="people-heading">
+                <SectionHeading
+                  headingId="people-heading"
+                  kicker="Stay connected"
+                  meta={
+                    <Link className="section-link" href="/people">
+                      All people
+                    </Link>
+                  }
+                  title="People"
+                />
+                {people.error ? (
+                  <p className="people-dashboard-unavailable">
+                    People reminders are unavailable.
+                  </p>
+                ) : (
+                  <div className="people-dashboard">
+                    <p className="people-dashboard-reconnect">
+                      {peopleReminders?.dueToReconnect.length
+                        ? `${peopleReminders.dueToReconnect.length} ${
+                            peopleReminders.dueToReconnect.length === 1
+                              ? "person may"
+                              : "people may"
+                          } be due for a reconnect`
+                        : "No reconnects are due"}
+                    </p>
+                    {peopleReminders?.dueToReconnect.slice(0, 2).map((person) => (
+                      <Link
+                        className="people-dashboard-row"
+                        href="/people"
+                        key={person.id}
+                      >
+                        <span>{person.name}</span>
+                        <span>
+                          Last talked{" "}
+                          {person.lastContactedDate
+                            ? formatLocalDate(
+                                `${person.lastContactedDate}T12:00:00`,
+                              )
+                            : "date unavailable"}
+                        </span>
+                      </Link>
+                    ))}
+                    {upcomingBirthdays.length ? (
+                      <div className="people-dashboard-birthdays">
+                        {upcomingBirthdays.map(({ person, date, daysAway }) => (
+                          <Link
+                            className="people-dashboard-row"
+                            href="/people"
+                            key={`${person.id}-${date}`}
+                          >
+                            <span>{person.name}</span>
+                            <span>
+                              {daysAway === 0
+                                ? "Birthday today"
+                                : daysAway === 1
+                                  ? "Birthday tomorrow"
+                                  : `Birthday in ${daysAway} days`}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="people-dashboard-empty">
+                        Add a birthday only if it helps you remember.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              <section aria-labelledby="wishlist-heading">
+                <SectionHeading
+                  headingId="wishlist-heading"
+                  kicker="For another day"
+                  meta={
+                    <Link className="section-link" href="/wishlist">
+                      Open Wishlist
+                    </Link>
+                  }
+                  title="Wishlist"
+                />
+                {wishlist.error ? (
+                  <p className="wishlist-dashboard-unavailable">
+                    Wishlist summary is unavailable.
+                  </p>
+                ) : (
+                  <Link className="wishlist-dashboard-summary" href="/wishlist">
+                    <span>
+                      {wishlistSummary.wantedCount}{" "}
+                      {wishlistSummary.wantedCount === 1 ? "item" : "items"}{" "}
+                      wanted
+                    </span>
+                    <strong>
+                      {formatCompactCurrency(
+                        wishlistSummary.estimatedTotal,
+                        preferences.currency,
+                      )}
+                    </strong>
+                    <span>estimated value</span>
+                  </Link>
                 )}
               </section>
 
