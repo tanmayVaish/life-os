@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   EmptyState,
   ErrorNotice,
@@ -121,6 +121,35 @@ export function TasksScreen() {
   const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
   const [editorInstance, setEditorInstance] = useState(0);
   const [operationError, setOperationError] = useState("");
+  const handledTaskIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedTask() {
+      if (isLoading || !tasks.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("taskId");
+      if (!requestedId || handledTaskIdRef.current === requestedId) return;
+
+      const target = tasks.find((t) => t.id === requestedId);
+      if (target) {
+        handledTaskIdRef.current = requestedId;
+        if (target.completed) {
+          setView("completed");
+        } else {
+          setView("all");
+        }
+        setProjectFilter("all");
+        setPriorityFilter("all");
+        setSelectedTask(target);
+        setEditorInstance((instance) => instance + 1);
+        setOperationError("");
+        setIsEditorOpen(true);
+      }
+    }
+
+    checkRequestedTask();
+    window.addEventListener("popstate", checkRequestedTask);
+    return () => window.removeEventListener("popstate", checkRequestedTask);
+  }, [isLoading, tasks]);
 
   useEffect(() => {
     const updateToday = () => setToday(localDateKey(new Date()));

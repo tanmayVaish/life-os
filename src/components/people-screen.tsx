@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   EmptyState,
   ErrorNotice,
@@ -108,6 +108,30 @@ export function PeopleScreen() {
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState("");
+  const handledPersonIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedPerson() {
+      if (people.isLoading || !people.records.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("personId");
+      if (!requestedId || handledPersonIdRef.current === requestedId) return;
+
+      const target = people.records.find((p) => p.id === requestedId);
+      if (target) {
+        handledPersonIdRef.current = requestedId;
+        setStatusFilter(target.archived ? "archived" : "active");
+        setContactFilter("all");
+        setRelationshipFilter("all");
+        setSelectedPersonId(target.id);
+        setOperationError("");
+        setDialogMode("detail");
+      }
+    }
+
+    checkRequestedPerson();
+    window.addEventListener("popstate", checkRequestedPerson);
+    return () => window.removeEventListener("popstate", checkRequestedPerson);
+  }, [people.isLoading, people.records]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   EmptyState,
   ErrorNotice,
@@ -113,6 +113,29 @@ export function GoalsScreen() {
   const [dialogMode, setDialogMode] = useState<DialogMode>("closed");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState("");
+  const handledGoalIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedGoal() {
+      if (goals.isLoading || !goals.records.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("goalId");
+      if (!requestedId || handledGoalIdRef.current === requestedId) return;
+
+      const target = goals.records.find((g) => g.id === requestedId);
+      if (target) {
+        handledGoalIdRef.current = requestedId;
+        setStatusFilter(target.status);
+        setLifeAreaFilter("all");
+        setSelectedGoalId(target.id);
+        setOperationError("");
+        setDialogMode("detail");
+      }
+    }
+
+    checkRequestedGoal();
+    window.addEventListener("popstate", checkRequestedGoal);
+    return () => window.removeEventListener("popstate", checkRequestedGoal);
+  }, [goals.isLoading, goals.records]);
 
   const selectedGoal =
     goals.records.find((goal) => goal.id === selectedGoalId) ?? null;

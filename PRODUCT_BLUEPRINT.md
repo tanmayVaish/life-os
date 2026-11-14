@@ -462,6 +462,11 @@ These are the preferred reuse points. A new component should only be introduced 
 
 ## 10. Development roadmap
 
+### Project Status Tracker
+- **Stage 1: Navigation and responsive layout** — COMPLETED (Global topbar removed; desktop left sidebar with 9 destinations, restrained active indicator & collapse support; tablet compact 68px icon rail; mobile fixed 5-tab bottom navigation with safe-area insets & accessible More sheet for secondary destinations).
+- **Stage 2: Global Search** — COMPLETED (Cross-store search across 8 IndexedDB stores, dedicated `/search` page, SearchOverlay with Cmd/Ctrl+K and `/` triggers, keyboard navigation, result excerpts, and deep links).
+- **Stage 3: Quick Capture expansion** — PENDING.
+
 The stages follow the requested progression, with storage/model work brought forward inside Stage 1 because all future modules depend on it.
 
 ### Stage 1 — Module foundation

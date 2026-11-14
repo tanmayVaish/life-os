@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   EmptyState,
   ErrorNotice,
@@ -183,6 +183,30 @@ export function FinanceScreen() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const handledExpenseIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedExpense() {
+      if (isLoading || !expenses.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("expenseId");
+      if (!requestedId || handledExpenseIdRef.current === requestedId) return;
+
+      const target = expenses.find((e) => e.id === requestedId);
+      if (target) {
+        handledExpenseIdRef.current = requestedId;
+        setPeriod("all");
+        setCategoryFilter("all");
+        setSelectedExpense(target);
+        setEditorVersion((version) => version + 1);
+        setOperationError("");
+        setIsEditorOpen(true);
+      }
+    }
+
+    checkRequestedExpense();
+    window.addEventListener("popstate", checkRequestedExpense);
+    return () => window.removeEventListener("popstate", checkRequestedExpense);
+  }, [isLoading, expenses]);
 
   useEffect(() => {
     function refreshDate() {

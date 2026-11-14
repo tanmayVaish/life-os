@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   EmptyState,
@@ -108,6 +108,30 @@ export function WishlistScreen() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState("");
   const [editorVersion, setEditorVersion] = useState(0);
+  const handledItemIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedItem() {
+      if (wishlist.isLoading || !wishlist.records.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("itemId");
+      if (!requestedId || handledItemIdRef.current === requestedId) return;
+
+      const target = wishlist.records.find((i) => i.id === requestedId);
+      if (target) {
+        handledItemIdRef.current = requestedId;
+        setView(target.status);
+        setCategoryFilter("all");
+        setPriorityFilter("all");
+        setSelectedItemId(target.id);
+        setOperationError("");
+        setDialogMode("detail");
+      }
+    }
+
+    checkRequestedItem();
+    window.addEventListener("popstate", checkRequestedItem);
+    return () => window.removeEventListener("popstate", checkRequestedItem);
+  }, [wishlist.isLoading, wishlist.records]);
 
   const selectedItem =
     wishlist.records.find((item) => item.id === selectedItemId) ?? null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   EmptyState,
   ErrorNotice,
@@ -122,6 +122,30 @@ export function ProjectsScreen() {
   const [taskEditorInstance, setTaskEditorInstance] = useState(0);
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [operationError, setOperationError] = useState("");
+  const handledProjectIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedProject() {
+      if (projects.isLoading || !projects.records.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("projectId");
+      if (!requestedId || handledProjectIdRef.current === requestedId) return;
+
+      const target = projects.records.find((p) => p.id === requestedId);
+      if (target) {
+        handledProjectIdRef.current = requestedId;
+        setFilter(target.status);
+        setSelectedProjectId(target.id);
+        setSelectedTask(null);
+        setSelectedTaskId("");
+        setOperationError("");
+        setDialogMode("detail");
+      }
+    }
+
+    checkRequestedProject();
+    window.addEventListener("popstate", checkRequestedProject);
+    return () => window.removeEventListener("popstate", checkRequestedProject);
+  }, [projects.isLoading, projects.records]);
 
   const selectedProject =
     projects.records.find((project) => project.id === selectedProjectId) ?? null;

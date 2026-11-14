@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   EmptyState,
   ErrorNotice,
@@ -151,6 +151,25 @@ export function JournalScreen() {
   const [selectedNote, setSelectedNote] = useState<NoteRecord | null>(null);
   const [openNote, setOpenNote] = useState<NoteRecord | null>(null);
   const [noteOperationError, setNoteOperationError] = useState("");
+  const handledNoteIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    function checkRequestedNote() {
+      if (notes.isLoading || !notes.records.length) return;
+      const requestedId = new URLSearchParams(window.location.search).get("noteId");
+      if (!requestedId || handledNoteIdRef.current === requestedId) return;
+
+      const target = notes.records.find((n) => n.id === requestedId);
+      if (target) {
+        handledNoteIdRef.current = requestedId;
+        setOpenNote(target);
+      }
+    }
+
+    checkRequestedNote();
+    window.addEventListener("popstate", checkRequestedNote);
+    return () => window.removeEventListener("popstate", checkRequestedNote);
+  }, [notes.isLoading, notes.records]);
 
   useEffect(() => {
     const updateToday = () => setToday(getLocalDateKey(new Date()));
