@@ -1356,6 +1356,117 @@ summary:focus-visible {
   opacity: 0.65;
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+   Quick Capture — expanded type selector & helpers (Stage 3)
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Type selector: wraps onto 2 rows on small modals */
+.capture-type-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  margin-bottom: 2px;
+}
+
+/* Two-column inline row for paired fields (amount+category, etc.) */
+.capture-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Expand toggle */
+.capture-expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-quiet);
+  cursor: pointer;
+  font-size: var(--font-size-caption);
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  transition: color var(--transition-subtle);
+  align-self: flex-start;
+}
+
+.capture-expand-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.capture-expand-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+  transform: rotate(90deg);
+  transition: transform var(--transition-subtle);
+}
+
+.capture-expand-icon.is-open {
+  transform: rotate(270deg);
+}
+
+/* Cancel button */
+.capture-cancel {
+  min-height: 34px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-quiet);
+  cursor: pointer;
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  transition:
+    background-color var(--transition-subtle),
+    color var(--transition-subtle),
+    border-color var(--transition-subtle);
+}
+
+.capture-cancel:hover {
+  border-color: var(--line-control);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+/* Optional-label badge */
+.optional-label {
+  color: var(--text-faint);
+  font-size: var(--font-size-caption);
+  font-weight: 400;
+}
+
+/* Hint text below a form section */
+.capture-hint {
+  margin: -4px 0 0;
+  color: var(--text-faint);
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+}
+
+/* Responsive: stack the two-column row on narrow modals */
+@media (max-width: 480px) {
+  .capture-row {
+    grid-template-columns: 1fr;
+  }
+
+  .capture-type-selector {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .capture-type {
+    padding: 5px 8px;
+  }
+}
+
 .save-confirmation {
   position: fixed;
   right: 24px;
